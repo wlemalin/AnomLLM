@@ -1,0 +1,472 @@
+from matplotlib import pyplot as plt
+import numpy as np
+import pandas as pd
+from typing import Optional
+import random
+import os
+from openai_api import send_openai_request
+from sklearn.metrics import precision_score, recall_score, f1_score
+from affiliation.generics import convert_vector_to_events
+from affiliation.metrics import pr_from_events
+
+
+def parse_output(output: str) -> dict:
+    """Parse the output of the AD model.
+
+    Args:
+        output: The output of the AD model.
+
+    Returns:
+        A dictionary containing the parsed output.
+    """
+    import json
+    if output.strip() == "":
+        output = "[]"
+    
+    # Trim the output string
+    trimmed_output = output[output.index('['):output.rindex(']') + 1]
+    # Try to parse the output as JSON
+    parsed_output = json.loads(trimmed_output)
+    
+    # Validate the output: list of dict with keys start and end
+    for item in parsed_output:
+        if not isinstance(item, dict):
+            raise ValueError("Parsed output contains non-dict items")
+        if 'start' not in item or 'end' not in item:
+            raise ValueError("Parsed output dictionaries must contain 'start' and 'end' keys")
+    
+    return parsed_output
+
+
+def interval_to_vector(interval, start=0, end=1000):
+    anomalies = np.zeros((end - start, 1))
+    for entry in interval:
+        if type(entry) is not dict:
+            assert len(entry) == 2
+            entry = {'start': entry[0], 'end': entry[1]}
+        entry['start'] = int(entry['start'])
+        entry['end'] = int(entry['end'])
+        entry['start'] = np.clip(entry['start'], start, end)
+        entry['end'] = np.clip(entry['end'], entry['start'], end)
+        anomalies[entry['start']:entry['end']] = 1
+    return anomalies
+
+
+def vector_to_interval(vector):
+    intervals = []
+    in_interval = False
+    start = 0
+    for i, value in enumerate(vector):
+        if value == 1 and not in_interval:
+            start = i
+            in_interval = True
+        elif value == 0 and in_interval:
+            intervals.append((start, i))
+            in_interval = False
+    if in_interval:
+        intervals.append((start, len(vector)))
+    return intervals
+
+
+def create_color_generator(exclude_color='blue'):
+    # Get the default color list
+    default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color'][1:]
+    # Filter out the excluded color
+    filtered_colors = [color for color in default_colors if color != exclude_color]
+    # Create a generator that yields colors in order
+    return (color for color in filtered_colors)
+
+
+def plot_series_and_predictions(
+    series: np.ndarray,
+    gt_anomaly_intervals: list[list[tuple[int, int]]],
+    anomalies: Optional[dict] = None,
+    single_series_figsize: tuple[int, int] = (20, 3),
+    gt_ylim: tuple[int, int] = (-1, 1),
+    gt_color: str = 'steelblue',
+    anomalies_alpha: float = 0.5
+) -> None:
+    plt.figure(figsize=single_series_figsize)
+    
+    color_generator = create_color_generator()
+    
+    def get_next_color(color_generator):
+        try:
+            # Return the next color
+            return next(color_generator)
+        except StopIteration:
+            # If all colors are used, reinitialize the generator and start over
+            color_generator = create_color_generator()
+            return next(color_generator)
+
+    num_anomaly_methods = len(anomalies) if anomalies else 0
+    ymin_max = [
+        (
+            i / num_anomaly_methods * 0.5 + 0.25,
+            (i + 1) / num_anomaly_methods * 0.5 + 0.25,
+        )
+        for i in range(num_anomaly_methods)
+    ]
+    ymin_max = ymin_max[::-1]
+
+    for i in range(series.shape[1]):
+        plt.ylim(gt_ylim)
+        plt.plot(series[:, i], color=gt_color)
+
+        if gt_anomaly_intervals is not None:
+            for start, end in gt_anomaly_intervals[i]:
+                plt.axvspan(start, end, alpha=0.2, color=gt_color)
+
+        if anomalies is not None:
+            for idx, (method, anomaly_values) in enumerate(anomalies.items()):
+                if anomaly_values.shape == series.shape:
+                    anomaly_values = np.nonzero(anomaly_values[:, i])[0].flatten()
+                ymin, ymax = ymin_max[idx]
+                random_color = get_next_color(color_generator)  # Use the function to get a random color
+                for anomaly in anomaly_values:
+                    plt.axvspan(anomaly, anomaly + 1, ymin=ymin, ymax=ymax, alpha=anomalies_alpha, color=random_color, lw=0)
+                plt.plot([], [], color=random_color, label=method)
+
+    plt.tight_layout()
+    if anomalies is not None:
+        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    return plt.gcf()
+
+
+def generate_batch_AD_requests(
+    model_name: str,
+    data_name: str,
+    request_func: callable,
+    variant: str = "standard"
+):
+    import json
+    import time
+    import pickle
+    import os
+    from loguru import logger
+    from data.synthetic import SyntheticDataset
+    from tqdm import trange
+    
+    results_dir = f'results/synthetic/{data_name}/{model_name}/'
+    data_dir = f'data/synthetic/{data_name}/eval/'
+    train_dir = f'data/synthetic/{data_name}/train/'
+    jsonl_fn = os.path.join(results_dir, variant + '_requests.jsonl')
+    os.makedirs(results_dir, exist_ok=True)
+    
+    # Remove the existing jsonl file
+    if os.path.exists(jsonl_fn):
+        os.remove(jsonl_fn)
+    
+    eval_dataset = SyntheticDataset(data_dir)
+    eval_dataset.load()
+
+    train_dataset = SyntheticDataset(train_dir)
+    train_dataset.load()
+
+    for i in trange(1, len(eval_dataset) + 1):
+        idx = f"{str(i).zfill(5)}"
+        body = request_func(
+            eval_dataset.series[i - 1],
+            train_dataset
+        )
+        body['model'] = model_name
+        custom_id = f"{data_name}_{model_name}_{variant}_{idx}"
+        request = {
+            "custom_id": custom_id,
+            "body": body,
+            "method": "POST",
+            "url": "/v1/chat/completions",
+        }
+        # Write the result to jsonl
+        with open(jsonl_fn, 'a') as f:
+            json.dump(request, f)
+            f.write('\n')
+    logger.info(f"Succesfully generated {len(eval_dataset)} AD requests and saved them to {jsonl_fn}.")
+    return jsonl_fn
+
+    
+def view_base64_image(base64_string):
+    import base64
+    from io import BytesIO
+    from PIL import Image
+    import matplotlib.pyplot as plt
+
+    # Decode the base64 string to binary data
+    image_data = base64.b64decode(base64_string)
+    
+    # Convert binary data to an image
+    image = Image.open(BytesIO(image_data))
+    
+    # Display the image
+    plt.imshow(image)
+    plt.axis('off')  # Hide axes
+    plt.show()
+
+
+def display_messages(messages):
+    from IPython.display import display, HTML
+    
+    html_content = "<div style='font-family: Arial, sans-serif;'>"
+
+    for message in messages:
+        role = message['role'].upper()
+        html_content += f"<p><strong>{role}:</strong></p>"
+        if isinstance(message['content'], str):
+            message['content'] = [{'type': 'text', 'text': message['content']}]
+        for content in message['content']:
+            if content['type'] == 'text':
+                text = content['text']
+                html_content += f"<p style='white-space: pre-wrap;'>{text}</p>"
+            elif content['type'] == 'image_url':
+                image_url = content['image_url']['url']
+                html_content += (
+                    f"<div style='text-align: center;'><img src='{image_url}' alt='User Image' "
+                    "style='margin: 10px auto; display: block; max-width: 50%;'/></div>"
+                )
+
+    html_content += "</div>"
+
+    display(HTML(html_content))
+    
+    
+def highlight_by_ranking(df):
+    def generate_html_color(value, min_val, midpoint, max_val):
+        """ Helper function to generate HTML color based on relative ranking. """
+        # Normalize value to get a color gradient
+        if value <= midpoint:
+            ratio = (value - min_val) / (midpoint - min_val)
+            r = int(0 + 127 * ratio)
+            g = int(255 - 127 * ratio)
+            b = 0
+        else:
+            ratio = (value - midpoint) / (max_val - midpoint)
+            r = int(127 + 128 * ratio)
+            g = int(127 - 127 * ratio)
+            b = 0
+        return f'rgb({r},{g},{b})'
+
+    styled_df = pd.DataFrame()
+    for index, row in df.iterrows():
+        # Rank the values in the row, larger number ranks lower (is worse)
+        rankings = row.rank(method='min', ascending=False)
+        
+        min_rank, max_rank = rankings.min(), rankings.max()
+        mid_rank = (max_rank + min_rank) / 2
+        
+        styled_row = {
+            col: f'<span style="color:{generate_html_color(rank, min_rank, mid_rank, max_rank)};">{value * 100:.2f}</span>'
+            for col, value, rank in zip(row.index, row, rankings)
+        }
+        styled_df = styled_df.append(pd.Series(styled_row, name=index))
+
+    return styled_df
+
+
+def compute_metrics(gt, prediction):
+    # Check if both gt and prediction are empty
+    if np.count_nonzero(gt) == 0 and np.count_nonzero(prediction) == 0:
+        metrics = {
+            'precision': 1,
+            'recall': 1,
+            'f1': 1,
+            'affi precision': 1,
+            'affi recall': 1,
+            'affi f1': 1
+        }
+    # Check if only gt is empty
+    elif np.count_nonzero(gt) == 0 or np.count_nonzero(prediction) == 0:
+        metrics = {
+            'precision': 0,
+            'recall': 0,
+            'f1': 0,
+            'affi precision': 0,
+            'affi recall': 0,
+            'affi f1': 0
+        }
+    else:
+        precision = precision_score(gt, prediction)
+        recall = recall_score(gt, prediction)
+        f1 = f1_score(gt, prediction)
+        
+        events_pred = convert_vector_to_events(prediction)
+        events_gt = convert_vector_to_events(gt)
+        Trange = (0, len(prediction))
+        aff = pr_from_events(events_pred, events_gt, Trange)
+        
+        # Calculate affiliation F1
+        if aff['precision'] + aff['recall'] == 0:
+            affi_f1 = 0
+        else:
+            affi_f1 = 2 * (aff['precision'] * aff['recall']) / (aff['precision'] + aff['recall'])
+        
+        metrics = {
+            'precision': round(precision, 3),
+            'recall': round(recall, 3),
+            'f1': round(f1, 3),
+            'affi precision': round(aff['precision'], 3),
+            'affi recall': round(aff['recall'], 3),
+            'affi f1': round(affi_f1, 3)
+        }
+    return metrics
+
+
+def styled_df_to_latex(styled_df):
+    def extract_color(html):
+        import re
+        color_match = re.search(r'color:rgb\((\d+),(\d+),(\d+)\);', html)
+        if color_match:
+            return tuple(map(int, color_match.groups()))
+        return (0, 0, 0)  # Default to black if no color is found
+
+    def rgb_to_latex_color(rgb):
+        return f"\\color[RGB]{{{rgb[0]},{rgb[1]},{rgb[2]}}}"
+
+    def format_number(num):
+        return f"{num:.3f}".lstrip('0')
+
+    def format_header(headers):
+        top_row = []
+        bottom_row = []
+        for header in headers:
+            header = header.replace('_', '-').replace('context', 'ctx')
+            if '-' in header:
+                parts = header.split('-', 1)
+                top_row.append(f"\\small\\texttt{{{parts[0]}}}-")
+                bottom_row.append(f"\\small\\texttt{{-{parts[1]}}}")
+            else:
+                top_row.append(f"\\small\\texttt{{{header}}}")
+                bottom_row.append('')
+        return ' & '.join(top_row) + ' \\\\', ' & '.join(bottom_row) + ' \\\\'
+
+    def format_index(idx):
+        return idx.replace('classical ', '')
+
+    latex_lines = [
+        "\\begin{table}[h]",
+        "\\centering",
+        "\\begin{tabular}{" + "l" + "r" * (len(styled_df.columns)) + "}",
+        "\\toprule"
+    ]
+
+    top_header, bottom_header = format_header(styled_df.columns)
+    latex_lines.extend([
+        "& " + top_header,
+        "& " + bottom_header,
+        "\\midrule"
+    ])
+
+    for idx, row in styled_df.iterrows():
+        row_values = []
+        for value in row:
+            color = extract_color(value)
+            numeric_value = float(value.split('>')[1].split('<')[0])
+            latex_color = rgb_to_latex_color(color)
+            formatted_value = format_number(numeric_value)
+            row_values.append(f"{latex_color}{formatted_value}")
+        latex_lines.append(format_index(idx) + " & " + " & ".join(row_values) + " \\\\")
+
+    latex_lines.extend([
+        "\\bottomrule",
+        "\\end{tabular}",
+        "\\caption{Your caption here}",
+        "\\label{tab:your_label_here}",
+        "\\end{table}"
+    ])
+
+    return "\n".join(latex_lines)
+
+
+def load_results(result_fn, raw=False):
+    """
+    Load and process results from a result JSON lines file.
+
+    Parameters
+    ----------
+    result_fn : str
+        The filename of the JSON lines file containing the results.
+    raw : bool, optional
+        If True, return raw JSON objects. If False, parse the response
+        and convert it to a vector. Default is False.
+
+    Returns
+    -------
+    list
+        A list of processed results. Each item is either a raw JSON object
+        or a vector representation of anomalies, depending on the
+        `raw` parameter.
+
+    Notes
+    -----
+    The function attempts to parse each line in the file. If parsing fails,
+    it appends an empty vector to the results.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file does not exist.
+    JSONDecodeError
+        If a line in the file is not valid JSON.
+    """
+    import json
+    import pandas as pd
+    from utils import parse_output, interval_to_vector
+    
+    with open(result_fn, 'r') as f:
+        results = []
+        for line in f:
+            info = json.loads(line)
+            if raw:
+                results.append(info)
+            else:
+                try:
+                    response_parsed = parse_output(info['response'])
+                    results.append(interval_to_vector(response_parsed))
+                except Exception:
+                    results.append(interval_to_vector([]))
+                    continue
+            
+    return results
+
+
+def collect_results(directory, raw=False):
+    """
+    Collect and process results from JSON lines files in a directory.
+
+    Parameters
+    ----------
+    directory : str
+        The path to the directory containing the JSON lines files.
+    raw : bool, optional
+        If True, return raw JSON objects. If False, parse the responses.
+        Default is False.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys are model names with variants, and values
+        are lists of processed results from each file.
+
+    Notes
+    -----
+    This function walks through the given directory, processing each
+    `.jsonl` file except those with 'requests' in the filename. It uses
+    the directory name as the model name and the filename (sans extension)
+    as the variant.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified directory does not exist.
+    """
+    import os
+
+    results = {}
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if 'requests' not in file and file.endswith('.jsonl'):
+                model_name = os.path.basename(root)
+                variant = file.replace('.jsonl', '')
+                result_fn = os.path.join(root, file)
+                model_key = f'{model_name} ({variant})'
+                results[model_key] = load_results(result_fn, raw=raw)
+    return results
