@@ -163,6 +163,7 @@ def create_vision_messages(
         history = []
         for series, anom in few_shots:
             img = time_series_to_image(series, **image_args)
+            anom = json.dumps(anom)
             history += [
                 {
                     "role": "user",

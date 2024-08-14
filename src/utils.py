@@ -376,7 +376,7 @@ def styled_df_to_latex(styled_df, caption, label):
     return "\n".join(latex_lines)
 
 
-def load_results(result_fn, raw=False):
+def load_results(result_fn, raw=False, postprocess_func: callable = None):
     """
     Load and process results from a result JSON lines file.
 
@@ -387,6 +387,8 @@ def load_results(result_fn, raw=False):
     raw : bool, optional
         If True, return raw JSON objects. If False, parse the response
         and convert it to a vector. Default is False.
+    postprocess_func : callable, optional
+        A function to postprocess the results (e.g., scaling down). Default is None.
 
     Returns
     -------
@@ -411,6 +413,9 @@ def load_results(result_fn, raw=False):
     import pandas as pd
     from utils import parse_output, interval_to_vector
     
+    if postprocess_func is None:
+        postprocess_func = lambda x: x
+    
     with open(result_fn, 'r') as f:
         results = []
         for line in f:
@@ -419,7 +424,7 @@ def load_results(result_fn, raw=False):
                 results.append(info)
             else:
                 try:
-                    response_parsed = parse_output(info['response'])
+                    response_parsed = parse_output(postprocess_func(info['response']))
                     results.append(interval_to_vector(response_parsed))
                 except Exception:
                     results.append(interval_to_vector([]))
@@ -459,14 +464,63 @@ def collect_results(directory, raw=False):
         If the specified directory does not exist.
     """
     import os
+    from config import postprocess_configs
 
     results = {}
+    config = postprocess_configs()
     for root, _, files in os.walk(directory):
         for file in files:
             if 'requests' not in file and file.endswith('.jsonl'):
                 model_name = os.path.basename(root)
                 variant = file.replace('.jsonl', '')
+                if variant in config:
+                    pf = config[variant]
+                else:
+                    pf = None
                 result_fn = os.path.join(root, file)
                 model_key = f'{model_name} ({variant})'
-                results[model_key] = load_results(result_fn, raw=raw)
+                results[model_key] = load_results(result_fn, raw=raw, postprocess_func=pf)
     return results
+
+
+def EDA(eval_dataset):
+    total_anom = 0
+    total = 0
+    time_series_without_anomalies = 0
+    anomaly_counts = []
+    anomaly_lengths = []
+
+    for i in range(400):
+        data = eval_dataset[i]
+        series_anom = 0
+        series_anomaly_count = 0
+        
+        for start, end in data[0][0]:
+            length = end - start
+            series_anom += length
+            series_anomaly_count += 1
+            anomaly_lengths.append(length)
+        
+        total_anom += series_anom
+        total += 1000
+        
+        if series_anom == 0:
+            time_series_without_anomalies += 1
+        
+        anomaly_counts.append(series_anomaly_count)
+
+    # Calculate statistics
+    avg_anomaly_ratio = total_anom / total
+    percent_without_anomalies = (time_series_without_anomalies / 400) * 100
+    avg_anomalies_per_series = sum(anomaly_counts) / 400
+    max_anomalies_in_series = max(anomaly_counts)
+    avg_anomaly_length = sum(anomaly_lengths) / len(anomaly_lengths)
+    max_anomaly_length = max(anomaly_lengths)
+
+    print(f"Average anomaly ratio: {avg_anomaly_ratio:.4f}")
+    print(f"Number of time series without anomalies: {time_series_without_anomalies}")
+    print(f"Percentage of time series without anomalies: {percent_without_anomalies:.2f}%")
+    print(f"Average number of anomalies per time series: {avg_anomalies_per_series:.2f}")
+    print(f"Maximum number of anomalies in a single time series: {max_anomalies_in_series}")
+    print(f"Average length of an anomaly: {avg_anomaly_length:.2f}")
+    print(f"Maximum length of an anomaly: {max_anomaly_length}")
