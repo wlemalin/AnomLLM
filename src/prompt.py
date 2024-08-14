@@ -1,3 +1,9 @@
+import numpy as np
+from scipy import interpolate
+import json
+import re
+
+
 PROMPT = """Detect ranges of anomalies in this time series, in terms of the x-axis coordinate.
 List one by one, in JSON format. 
 If there are no anomalies, answer with an empty list [].
@@ -18,17 +24,39 @@ SAFETY_SETTINGS = [
 ]
 
 
+def scale_x_axis(data, scale_factor):
+    """
+    Scale the x-axis of a 1D numpy array.
+    
+    :param data: Input numpy array of shape (1000,)
+    :param scale_factor: Scale factor for the x-axis (e.g., 0.3)
+    :return: Scaled and interpolated numpy array
+    """
+    original_length = len(data)
+    new_length = int(original_length * scale_factor)
+    
+    # Create original and new x-coordinates
+    x_original = np.linspace(0, 1, original_length)
+    x_new = np.linspace(0, 1, new_length)
+    
+    # Create an interpolation function
+    f = interpolate.interp1d(x_original, data, kind='linear')
+    
+    # Interpolate the data to the new x-coordinates
+    scaled_data = f(x_new)
+    
+    return scaled_data
+
+
 def time_series_to_str(
     arr, 
+    scale=None,               # Scale and interpolate to reduce the text length
     step=None,                # Label every `step` time steps
     csv=False,                # CSV style, position, TODO
     token_per_digit=False,    # Token-per-Digit, llmtime, TODO
     pap=False,                # Prompt-as-Prefix, timellm, TODO
-    sep=" "                  # Separator
+    sep=" "                   # Separator
 ):
-    import numpy as np
-    import re
-    
     # Flatten the numpy array
     if type(arr) is list:
         arr = np.array(arr)
@@ -37,6 +65,10 @@ def time_series_to_str(
         arr = arr.numpy()
         
     flat_arr = arr.flatten()
+    
+    # Scale the x-axis
+    if scale is not None and scale != 1:
+        flat_arr = scale_x_axis(flat_arr, scale)
 
     # Round each element to 2 decimal places
     rounded_arr = np.round(flat_arr, 2)
@@ -154,8 +186,12 @@ def create_text_messages(
     time_series,
     few_shots=False,
     cot=False,  # TODO
-    series_args={}
+    series_args={},
 ):
+    if "scale" not in series_args:
+        series_args["scale"] = 1.0
+    scale = series_args["scale"]
+    
     messages = [
         {
             "role": "user",
@@ -169,6 +205,13 @@ def create_text_messages(
     if few_shots:
         history = []
         for series, anom in few_shots:
+            if scale != 1:
+                # Scale anom down to the same scale as the time series
+                for i in range(len(anom)):
+                    anom[i]["start"] = int(anom[i]["start"] * scale)
+                    anom[i]["end"] = int(anom[i]["end"] * scale)
+            anom = json.dumps(anom)
+            
             history += [
                 {
                     "role": "user",
@@ -189,7 +232,7 @@ def create_openai_request(
     vision=False,
     temperature=0.4,
     stop=["’’’’", " – –", "<|endoftext|>", "<|eot_id|>"],
-    cot=False,  # Chain of Thought, TODO
+    cot=False,       # Chain of Thought, TODO
     series_args={},  # Arguments for time_series_to_str
     image_args={},   # Arguments for time_series_to_image
 ):

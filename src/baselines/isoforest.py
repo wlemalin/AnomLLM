@@ -6,7 +6,7 @@ from tqdm import trange
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Isolation forecast anomaly detection.')
     parser.add_argument('--variant', type=str, default='0shot', help='Variant type')
-    parser.add_argument('--model', type=str, default='isolation_forest', help='Model name')
+    parser.add_argument('--model', type=str, default='isolation-forest', help='Model name')
     parser.add_argument('--data', type=str, default='point', help='Data name')
     return parser.parse_args()
 

@@ -310,7 +310,7 @@ def compute_metrics(gt, prediction):
     return metrics
 
 
-def styled_df_to_latex(styled_df):
+def styled_df_to_latex(styled_df, caption, label):
     def extract_color(html):
         import re
         color_match = re.search(r'color:rgb\((\d+),(\d+),(\d+)\);', html)
@@ -322,7 +322,7 @@ def styled_df_to_latex(styled_df):
         return f"\\color[RGB]{{{rgb[0]},{rgb[1]},{rgb[2]}}}"
 
     def format_number(num):
-        return f"{num:.3f}".lstrip('0')
+        return f"{num:.2f}".lstrip('0')
 
     def format_header(headers):
         top_row = []
@@ -368,8 +368,8 @@ def styled_df_to_latex(styled_df):
     latex_lines.extend([
         "\\bottomrule",
         "\\end{tabular}",
-        "\\caption{Your caption here}",
-        "\\label{tab:your_label_here}",
+        f"\\caption{{{caption}}}",
+        f"\\label{{tab:{label}}}",
         "\\end{table}"
     ])
 
