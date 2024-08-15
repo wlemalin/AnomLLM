@@ -1,17 +1,22 @@
 #!/bin/bash
 
-data=("trend" "range" "point" "freq")
-# variants=("1shot-vision" "0shot-vision" "1shot-text" "0shot-text")
-variants=("1shot-text-s0.3" "0shot-text-s0.3")
+data=("trend" "range" "point" "freq" "noisy-point" "noisy-freq" "noisy-trend")
+variants=(
+  "1shot-vision" "0shot-vision" "1shot-text-s0.3" "0shot-text-s0.3" "0shot-text" \
+  "0shot-text-s0.3-cot" "1shot-text-s0.3-cot" "0shot-vision-cot" "1shot-vision-cot"
+)
 
-# models=("gpt-4o" "gpt-4o-mini")
+# data=("range")
+# variants=("1shot-vision-cot")
 
-# python src/batch_api.py --data trend --model gpt-4o --variant 1shot-vision
+# # python src/batch_api.py --data trend --model gpt-4o --variant 1shot-vision
+# models=("gpt-4o-mini")
 # for model in "${models[@]}"; do
 #   for datum in "${data[@]}"; do
 #     for variant in "${variants[@]}"; do
 #       session_name="${datum}_${model}_${variant}"
 #       command="python src/batch_api.py --data $datum --model $model --variant $variant"
+#       echo "Runing \`$command\` ..."
 #       tmux new-session -d -s "$session_name" "$command"
 #     done
 #   done

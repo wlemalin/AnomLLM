@@ -39,7 +39,7 @@ def generate_and_save_batch(client, variant, batch_api_configs, model_name, data
     return batch
 
 
-def save_batch_to_file(batch, batch_key, filename='results/batch.json'):
+def save_batch_to_file(batch, batch_key, filename):
     try:
         with open(filename, 'r') as f:
             existing_batches = json.load(f)
@@ -87,8 +87,9 @@ def main():
     result_fn = f"results/synthetic/{args.data}/{args.model}/{args.variant}.jsonl"
 
     # Check if batch exists
+    batch_fn = f'results/synthetic/{args.data}/{args.model}/{args.variant}_batch.json'
     try:
-        with open('results/batch.json', 'r') as f:
+        with open(batch_fn, 'r') as f:
             existing_batches = json.load(f)
             if batch_key in existing_batches:
                 logger.info(f"Existing batch for {batch_key} found: {existing_batches[batch_key]['id']}")
@@ -109,7 +110,7 @@ def main():
                 else:
                     logger.debug(f"Batch {existing_batches[batch_key]['id']} is still wait in progress")
                 if batch:
-                    save_batch_to_file(batch, batch_key)
+                    save_batch_to_file(batch, batch_key, batch_fn)
                     return
     except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
         logger.error(f"Error loading existing batch: {e}")
@@ -117,7 +118,7 @@ def main():
     # If not exists, generate a new batch
     logger.info(f"Generating new batch for {batch_key}...")
     batch = generate_and_save_batch(client, args.variant, batch_api_configs, args.model, args.data)
-    save_batch_to_file(batch, batch_key)
+    save_batch_to_file(batch, batch_key, batch_fn)
 
 
 if __name__ == '__main__':

@@ -12,7 +12,9 @@ Output template:
 [{"start": ..., "end": ...}, {"start": ..., "end": ...}...]
 """
 
-COT_PROMPT = "Let's think step by step. "
+COT_PROMPT = PROMPT.replace(
+    "Output template:", "Your output should include step-by-step explanation and following json: "
+) + "Let's think step by step. "
 
 COT_ANSWER_TEMPLATE = \
 """To detect anomalies in the provided time series data, we can look for sudden changes or outliers in the time series pattern.
@@ -156,7 +158,7 @@ def create_vision_messages(
             "content": [
                 {
                     "type": "text",
-                    "text": PROMPT + ("" if not cot else COT_PROMPT),
+                    "text": PROMPT if not cot else COT_PROMPT
                 },
                 {
                     "type": "image_url",
@@ -193,7 +195,7 @@ def create_vision_messages(
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": PROMPT + ("" if not cot else COT_PROMPT)},
+                        {"type": "text", "text": PROMPT if not cot else COT_PROMPT},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -224,7 +226,7 @@ def create_text_messages(
             "content": time_series_to_str(time_series, **series_args)
             + "\n\n"
             + LIMIT_PROMPT
-            + PROMPT + ("" if not cot else COT_PROMPT),
+            + PROMPT if not cot else COT_PROMPT,
         }
     ]
     

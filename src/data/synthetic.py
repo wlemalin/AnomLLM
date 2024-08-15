@@ -439,7 +439,7 @@ class SyntheticDataset(Dataset):
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.figs_dir, exist_ok=True)
 
-    def generate(self, num_series=400, seed=42):
+    def generate(self, num_series=400, seed=42, add_noise=False):
         # Fix the seed for reproducibility
         np.random.seed(seed)
 
@@ -449,6 +449,8 @@ class SyntheticDataset(Dataset):
                 number_of_sensors=1,
                 ratio_of_anomalous_sensors=1.0
             )
+            if add_noise:
+                data += np.random.normal(0, 0.08, data.shape)
             self.series.append(data)
             self.anom.append(anomaly_locations)
             
@@ -510,7 +512,7 @@ class SyntheticDataset(Dataset):
 def main(args):
     dataset = SyntheticDataset(args.data_dir, args.synthetic_func)
     if args.generate:
-        dataset.generate(args.num_series, args.seed)
+        dataset.generate(args.num_series, args.seed, args.add_noise)
     else:
         dataset.load()
     
@@ -524,6 +526,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument("--data_dir", type=str, default='data/synthetic/range/', help="Directory to save/load the data")
     parser.add_argument("--generate", action="store_true", help="Generate new data instead of loading existing data")
+    parser.add_argument("--add_noise", action="store_true", help="Add noise to the generated data")
     parser.add_argument("--synthetic_func", type=str, default="synthetic_dataset_with_out_of_range_anomalies", 
                         help="Name of the synthetic function to use")
     

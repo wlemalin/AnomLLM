@@ -77,12 +77,14 @@ def scale_result_str(input_string, scale=0.3):
 def postprocess_configs():
     return {
         '0shot-text-s0.3': lambda s: scale_result_str(s, 0.3),
-        '1shot-text-s0.3': lambda s: scale_result_str(s, 0.3)
+        '1shot-text-s0.3': lambda s: scale_result_str(s, 0.3),
+        '0shot-text-s0.3-cot': lambda s: scale_result_str(s, 0.3),
+        '1shot-text-s0.3-cot': lambda s: scale_result_str(s, 0.3),
     }
 
 
 def dataset_descriptions():
-    return {
+    description = {
         "trend": {
             "normal": "the normal data follows a steady but slowly increasing trend from -1 to 1",
             "abnormal": "the data appears to either increase much faster or decrease, deviating from the normal trend",
@@ -104,3 +106,9 @@ def dataset_descriptions():
             "abnormal_summary": "amplitude changes"
         }
     }
+    
+    full_description = description.copy()
+    for key, value in description.items():
+        full_description['noisy-' + key] = value
+
+    return full_description
