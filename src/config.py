@@ -67,12 +67,6 @@ def create_batch_api_configs():
             few_shots=train_dataset.few_shots(num_shots=0),
             series_args={"scale": 0.3, "csv": True}
         ),
-        "1shot-text-s0.3-csv": lambda series, train_dataset: create_openai_request(
-            series,
-            vision=False,
-            few_shots=train_dataset.few_shots(num_shots=1),
-            series_args={"scale": 0.3, "csv": True}
-        ),
         "0shot-text-s0.3-cot-csv": lambda series, train_dataset: create_openai_request(
             series,
             vision=False,
@@ -80,11 +74,17 @@ def create_batch_api_configs():
             series_args={"scale": 0.3, "csv": True},
             cot=train_dataset.name
         ),
-        "1shot-text-s0.3-cot-csv": lambda series, train_dataset: create_openai_request(
+        "0shot-text-s0.3-tpd": lambda series, train_dataset: create_openai_request(
             series,
             vision=False,
-            few_shots=train_dataset.few_shots(num_shots=1),
-            series_args={"scale": 0.3, "csv": True},
+            few_shots=train_dataset.few_shots(num_shots=0),
+            series_args={"scale": 0.3, "token_per_digit": True}
+        ),
+        "0shot-text-s0.3-cot-tpd": lambda series, train_dataset: create_openai_request(
+            series,
+            vision=False,
+            few_shots=train_dataset.few_shots(num_shots=0),
+            series_args={"scale": 0.3, "token_per_digit": True},
             cot=train_dataset.name
         ),
     }

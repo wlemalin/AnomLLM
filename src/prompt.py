@@ -61,8 +61,8 @@ def time_series_to_str(
     arr, 
     scale=None,               # Scale and interpolate to reduce the text length
     step=None,                # Label every `step` time steps
-    csv=False,                # CSV style, position, TODO
-    token_per_digit=False,    # Token-per-Digit, llmtime, TODO
+    csv=False,                # CSV style, position
+    token_per_digit=False,    # Token-per-Digit, llmtime
     pap=False,                # Prompt-as-Prefix, timellm, TODO
     sep=" "                   # Separator
 ):
@@ -86,6 +86,15 @@ def time_series_to_str(
         # CSV format
         result = "idx,value\n"
         result += "\n".join(f"{i+1},{value}" for i, value in enumerate(rounded_arr))
+    elif token_per_digit:
+        # Token-per-Digit format
+        def format_number(num):
+            # Multiply by 100 to remove decimal and round to integer
+            int_num = int(round(num * 100))
+            # Convert to string and add spaces between digits
+            return ' '.join(str(int_num))
+
+        result = ' , '.join(format_number(num) for num in rounded_arr)
     else:
         # Convert each element to string
         str_arr = [str(i) for i in rounded_arr]
