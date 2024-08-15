@@ -226,7 +226,7 @@ def create_text_messages(
             "content": time_series_to_str(time_series, **series_args)
             + "\n\n"
             + LIMIT_PROMPT
-            + PROMPT if not cot else COT_PROMPT,
+            + (PROMPT if not cot else COT_PROMPT),
         }
     ]
     
@@ -263,7 +263,7 @@ def create_text_messages(
                     "content": time_series_to_str(series, **series_args)
                     + "\n\n"
                     + LIMIT_PROMPT
-                    + PROMPT + ("" if not cot else COT_PROMPT),
+                    + (PROMPT if not cot else COT_PROMPT),
                 },
                 {"role": "assistant", "content": answer},
             ]
