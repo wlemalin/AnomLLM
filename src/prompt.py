@@ -12,16 +12,23 @@ Output template:
 [{"start": ..., "end": ...}, {"start": ..., "end": ...}...]
 """
 
+COT_PROMPT = "Let's think step by step. "
+
+COT_ANSWER_TEMPLATE = \
+"""To detect anomalies in the provided time series data, we can look for sudden changes or outliers in the time series pattern.
+Based on the general pattern, <|normal|>.
+The following ranges of anomalies can be identified: \n```<|answer_json|>```
+During those periods, <|abnormal|>.
+"""
+
+COT_NORMAL_ANSWER_TEMPLATE = \
+"""To detect anomalies in the provided time series data, we can look for sudden changes or outliers in the time series pattern.
+Based on the general pattern, <|normal|>.
+The anomalies are: \n```[]```
+The values appear to follow a consistent pattern without sudden <|abnormal_summary|> that would indicate an anomaly.
+"""
 
 LIMIT_PROMPT = "Assume there are up to 5 anomalies. "
-
-
-SAFETY_SETTINGS = [
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
 
 
 def scale_x_axis(data, scale_factor):
@@ -139,7 +146,7 @@ def time_series_to_image(
 def create_vision_messages(
     time_series, 
     few_shots=False,
-    cot=False,  # TODO
+    cot=False,
     image_args={}
 ):
     img = time_series_to_image(time_series, **image_args)
@@ -149,7 +156,7 @@ def create_vision_messages(
             "content": [
                 {
                     "type": "text",
-                    "text": PROMPT,
+                    "text": PROMPT + ("" if not cot else COT_PROMPT),
                 },
                 {
                     "type": "image_url",
@@ -158,17 +165,35 @@ def create_vision_messages(
             ],
         }
     ]
+    
+    if cot:
+        from config import dataset_descriptions
+        dd = dataset_descriptions()
+        assert cot in dd, f"Dataset description not found for cot: {cot}"
+        cot_info = dd[cot]
 
     if few_shots:
         history = []
         for series, anom in few_shots:
             img = time_series_to_image(series, **image_args)
+            if cot:
+                if len(anom) == 0:
+                    answer = COT_NORMAL_ANSWER_TEMPLATE
+                else:
+                    answer = COT_ANSWER_TEMPLATE
+                answer = answer.replace("<|normal|>", cot_info["normal"])
+                answer = answer.replace("<|abnormal_summary|>", cot_info["abnormal_summary"])
+                answer = answer.replace("<|abnormal|>", cot_info["abnormal"])
+                answer = answer.replace("<|answer_json|>", json.dumps(anom))
+            else:
+                answer = json.dumps(anom)
+            
             anom = json.dumps(anom)
             history += [
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": PROMPT},
+                        {"type": "text", "text": PROMPT + ("" if not cot else COT_PROMPT)},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -177,7 +202,7 @@ def create_vision_messages(
                         }
                     ],
                 },
-                {"role": "assistant", "content": anom},
+                {"role": "assistant", "content": answer},
             ]
         messages = history + messages
     return messages
@@ -186,7 +211,7 @@ def create_vision_messages(
 def create_text_messages(
     time_series,
     few_shots=False,
-    cot=False,  # TODO
+    cot=False,
     series_args={},
 ):
     if "scale" not in series_args:
@@ -199,9 +224,15 @@ def create_text_messages(
             "content": time_series_to_str(time_series, **series_args)
             + "\n\n"
             + LIMIT_PROMPT
-            + PROMPT,
+            + PROMPT + ("" if not cot else COT_PROMPT),
         }
     ]
+    
+    if cot:
+        from config import dataset_descriptions
+        dd = dataset_descriptions()
+        assert cot in dd, f"Dataset description not found for cot: {cot}"
+        cot_info = dd[cot]
 
     if few_shots:
         history = []
@@ -211,7 +242,18 @@ def create_text_messages(
                 for i in range(len(anom)):
                     anom[i]["start"] = int(anom[i]["start"] * scale)
                     anom[i]["end"] = int(anom[i]["end"] * scale)
-            anom = json.dumps(anom)
+                    
+            if cot:
+                if len(anom) == 0:
+                    answer = COT_NORMAL_ANSWER_TEMPLATE
+                else:
+                    answer = COT_ANSWER_TEMPLATE
+                answer = answer.replace("<|normal|>", cot_info["normal"])
+                answer = answer.replace("<|abnormal_summary|>", cot_info["abnormal_summary"])
+                answer = answer.replace("<|abnormal|>", cot_info["abnormal"])
+                answer = answer.replace("<|answer_json|>", json.dumps(anom))
+            else:
+                answer = json.dumps(anom)
             
             history += [
                 {
@@ -219,9 +261,9 @@ def create_text_messages(
                     "content": time_series_to_str(series, **series_args)
                     + "\n\n"
                     + LIMIT_PROMPT
-                    + PROMPT,
+                    + PROMPT + ("" if not cot else COT_PROMPT),
                 },
-                {"role": "assistant", "content": anom},
+                {"role": "assistant", "content": answer},
             ]
         messages = history + messages
     return messages
@@ -233,7 +275,7 @@ def create_openai_request(
     vision=False,
     temperature=0.4,
     stop=["’’’’", " – –", "<|endoftext|>", "<|eot_id|>"],
-    cot=False,       # Chain of Thought, TODO
+    cot=False,       # Chain of Thought
     series_args={},  # Arguments for time_series_to_str
     image_args={},   # Arguments for time_series_to_image
 ):

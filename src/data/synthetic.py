@@ -340,7 +340,7 @@ def synthetic_dataset_with_out_of_range_anomalies(
     test_size: int = 1000,
     nominal_data_mean: float = 0.0,
     nominal_data_std: float = 0.1,
-    normal_duration_rate: float = 400.0,
+    normal_duration_rate: float = 800.0,
     anomaly_duration_rate: float = 20.0,
     anomaly_size_range: tuple = (0.5, 0.8),
     minimum_anomaly_duration: int = 5,
@@ -417,7 +417,7 @@ def synthetic_dataset_with_out_of_range_anomalies(
     dataset = {'train': train, 'test': test, 'labels': labels}
     anomaly_intervals = [all_locations.get(i, []) for i in range(test.shape[1])]
 
-    return dataset['train'], anomaly_intervals
+    return dataset['test'], anomaly_intervals
 
 
 class SyntheticDataset(Dataset):
@@ -431,7 +431,6 @@ class SyntheticDataset(Dataset):
         self.figs_dir = os.path.join(data_dir, 'figs')
         self.series = []
         self.anom = []
-        self.img_list = []
         
         # Load the function dynamically
         self.synthetic_func = globals()[synthetic_func_name]
@@ -463,7 +462,6 @@ class SyntheticDataset(Dataset):
             fig_path = os.path.join(self.figs_dir, f'{i+1:03d}.png')
             fig.savefig(fig_path)
             plt.close()
-            self.img_list.append(fig_path)
 
         # Save the data
         self.save()
@@ -482,15 +480,8 @@ class SyntheticDataset(Dataset):
             data_dict = pickle.load(f)
         self.series = data_dict['series']
         self.anom = data_dict['anom']
-
-        # Load images
-        self.img_list = []
-        for i in range(len(self.series)):
-            img_path = os.path.join(self.figs_dir, f'{i+1:03d}.png')
-            if os.path.exists(img_path):
-                self.img_list.append(img_path)
-            else:
-                print(f"Warning: Image {img_path} not found.")
+        self.name = os.path.basename(os.path.dirname(os.path.dirname(self.data_dir)))
+        print(f"Loaded dataset {self.name} with {len(self.series)} series.")
 
     def __len__(self):
         return len(self.series)
@@ -498,20 +489,19 @@ class SyntheticDataset(Dataset):
     def __getitem__(self, idx):
         anom = self.anom[idx]
         series = self.series[idx]
-        img_path = self.img_list[idx]
 
         # Convert to torch tensors
         anom = torch.tensor(anom, dtype=torch.float32)
         series = torch.tensor(series, dtype=torch.float32)
 
-        return anom, series, img_path
+        return anom, series
     
     def few_shots(self, num_shots=5, idx=None):
         if idx is None:
             idx = np.random.choice(len(self.series), num_shots, replace=False)
         few_shot_data = []
         for i in idx:
-            anom, series, img_path = self.__getitem__(i)
+            anom, series = self.__getitem__(i)
             anom = [{"start": int(start.item()), "end": int(end.item())} for start, end in list(anom[0])]
             few_shot_data.append((series, anom))
         return few_shot_data
@@ -526,7 +516,6 @@ def main(args):
     
     print(f"Dataset loaded with {len(dataset.series)} series.")
     print(f"Number of anomaly lists: {len(dataset.anom)}")
-    print(f"Number of images: {len(dataset.img_list)}")
 
 
 if __name__ == "__main__":
