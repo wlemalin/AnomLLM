@@ -81,27 +81,32 @@ def time_series_to_str(
 
     # Round each element to 2 decimal places
     rounded_arr = np.round(flat_arr, 2)
+    
+    if csv:
+        # CSV format
+        result = "idx,value\n"
+        result += "\n".join(f"{i+1},{value}" for i, value in enumerate(rounded_arr))
+    else:
+        # Convert each element to string
+        str_arr = [str(i) for i in rounded_arr]
 
-    # Convert each element to string
-    str_arr = [str(i) for i in rounded_arr]
+        # Insert time step messages
+        if step is not None:
+            num_steps = len(str_arr) // step
+            for i in range(num_steps + 1):
+                index = i * (step + 1)
+                # str_arr.insert(index, f'\nstep {i * step} ~ {(i + 1) * step - 1}:')
+                str_arr.insert(index, "\n")
 
-    # Insert time step messages
-    if step is not None:
-        num_steps = len(str_arr) // step
-        for i in range(num_steps + 1):
-            index = i * (step + 1)
-            # str_arr.insert(index, f'\nstep {i * step} ~ {(i + 1) * step - 1}:')
-            str_arr.insert(index, "\n")
+        # Join all elements with comma
+        result = sep.join(str_arr)
 
-    # Join all elements with comma
-    result = sep.join(str_arr)
+        # Remove comma after colon
+        result = result.replace("\n" + sep, "\n")
 
-    # Remove comma after colon
-    result = result.replace("\n" + sep, "\n")
-
-    # Remove trailing step if there is no comma after last `step`
-    if re.search(r"\nstep \d+ ~ \d+:$", result):
-        result = re.sub(r", \nstep \d+ ~ \d+:$", "", result)
+        # Remove trailing step if there is no comma after last `step`
+        if re.search(r"\nstep \d+ ~ \d+:$", result):
+            result = re.sub(r", \nstep \d+ ~ \d+:$", "", result)
 
     return result
 
