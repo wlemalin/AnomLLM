@@ -2,6 +2,7 @@ import numpy as np
 from scipy import interpolate
 import json
 import re
+from scipy import stats
 
 
 PROMPT = """Detect ranges of anomalies in this time series, in terms of the x-axis coordinate.
@@ -63,7 +64,7 @@ def time_series_to_str(
     step=None,                # Label every `step` time steps
     csv=False,                # CSV style, position
     token_per_digit=False,    # Token-per-Digit, llmtime
-    pap=False,                # Prompt-as-Prefix, timellm, TODO
+    pap=False,                # Prompt-as-Prefix, timellm
     sep=" "                   # Separator
 ):
     # Flatten the numpy array
@@ -81,6 +82,29 @@ def time_series_to_str(
 
     # Round each element to 2 decimal places
     rounded_arr = np.round(flat_arr, 2)
+    
+    if pap:
+        # Generate prompt-as-prefix
+        min_val = np.min(rounded_arr)
+        max_val = np.max(rounded_arr)
+        median_val = np.median(rounded_arr)
+        std_dev = np.std(rounded_arr)
+        
+        # Estimate trend using linear regression
+        x = np.arange(len(rounded_arr))
+        slope, _, _, _, _ = stats.linregress(x, rounded_arr)
+        if slope > 0.03:
+            trend = "increasing"
+        elif slope < -0.03:
+            trend = "decreasing"
+        else:
+            trend = "stable"
+        
+        prefix = (f"The input has a minimum of {min_val:.2f}, a maximum of {max_val:.2f}, "
+                  f"and a median of {median_val:.2f}. The standard deviation is {std_dev:.2f}. "
+                  f"The overall trend is {trend}.\n\n")
+    else:
+        prefix = ""
     
     if csv:
         # CSV format
@@ -117,7 +141,7 @@ def time_series_to_str(
         if re.search(r"\nstep \d+ ~ \d+:$", result):
             result = re.sub(r", \nstep \d+ ~ \d+:$", "", result)
 
-    return result
+    return prefix + result
 
 
 def time_series_to_image(

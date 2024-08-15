@@ -87,6 +87,19 @@ def create_batch_api_configs():
             series_args={"scale": 0.3, "token_per_digit": True},
             cot=train_dataset.name
         ),
+        "0shot-text-s0.3-pap": lambda series, train_dataset: create_openai_request(
+            series,
+            vision=False,
+            few_shots=train_dataset.few_shots(num_shots=0),
+            series_args={"scale": 0.3, "pap": True}
+        ),
+        "0shot-text-s0.3-cot-pap": lambda series, train_dataset: create_openai_request(
+            series,
+            vision=False,
+            few_shots=train_dataset.few_shots(num_shots=0),
+            series_args={"scale": 0.3, "pap": True},
+            cot=train_dataset.name
+        )
     }
 
 
