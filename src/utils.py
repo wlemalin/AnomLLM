@@ -20,8 +20,6 @@ def parse_output(output: str) -> dict:
         A dictionary containing the parsed output.
     """
     import json
-    if output.strip() == "":
-        output = "[]"
     
     # Trim the output string
     trimmed_output = output[output.index('['):output.rindex(']') + 1]
@@ -184,7 +182,7 @@ def generate_batch_AD_requests(
     logger.info(f"Succesfully generated {len(eval_dataset)} AD requests and saved them to {jsonl_fn}.")
     return jsonl_fn
 
-    
+
 def view_base64_image(base64_string):
     import base64
     from io import BytesIO
@@ -227,8 +225,8 @@ def display_messages(messages):
     html_content += "</div>"
 
     display(HTML(html_content))
-    
-    
+
+
 def highlight_by_ranking(df):
     def generate_html_color(value, min_val, midpoint, max_val):
         """ Helper function to generate HTML color based on relative ranking. """
@@ -245,26 +243,72 @@ def highlight_by_ranking(df):
             b = 0
         return f'rgb({r},{g},{b})'
 
-    styled_df = pd.DataFrame()
-    for index, row in df.iterrows():
-        # Rank the values in the row, larger number ranks lower (is worse)
-        rankings = row.rank(method='min', ascending=False)
+    # Convert to DataFrame if it's a Series (single column)
+    if isinstance(df, pd.Series):
+        df = df.to_frame()
+
+    styled_df = pd.DataFrame(index=df.index)
+    for col in df.columns:
+        # Rank the values in the column, larger number ranks lower (is worse)
+        rankings = df[col].rank(method='min', ascending=False)
         
         min_rank, max_rank = rankings.min(), rankings.max()
         mid_rank = (max_rank + min_rank) / 2
         
-        styled_row = {
-            col: f'<span style="color:{generate_html_color(rank, min_rank, mid_rank, max_rank)};">{value * 100:.2f}</span>'
-            for col, value, rank in zip(row.index, row, rankings)
-        }
-        styled_df = styled_df.append(pd.Series(styled_row, name=index))
+        styled_col = [
+            f'<span style="color:{generate_html_color(rank, min_rank, mid_rank, max_rank)};">{value * 100:.2f}</span>'
+            for value, rank in zip(df[col], rankings)
+        ]
+        styled_df[col] = styled_col
 
+    # If input was a Series, return a Series
+    if len(df.columns) == 1 and isinstance(df, pd.DataFrame):
+        return styled_df[df.columns[0]]
+    
+    # Replace precision in column names by prec
+    styled_df.columns = [col.replace('precision', 'PRE').replace('recall', 'REC').replace('f1', 'F1') for col in styled_df.columns]
+    
     return styled_df
+
+
+def process_dataframe(df):
+    import re
+    
+    # Function to extract model name and variant
+    def extract_model_variant(text):
+        match = re.match(r'(.*?)\s*\((.*?)\)', text)
+        if match:
+            return match.group(1).strip(), match.group(2).strip()
+        return text, ''
+
+    # Split the index into model and variant
+    df.reset_index(inplace=True)
+    df['model'], df['variant'] = zip(*df['index'].apply(extract_model_variant))
+    
+    # Drop the original index column
+    df.drop('index', axis=1, inplace=True)
+    
+    # Sort by model and variant
+    df = df.sort_values(['model', 'variant'])
+    
+    # Set model and variant as index
+    df.set_index(['model', 'variant'], inplace=True)
+    
+    return df
 
 
 def compute_metrics(gt, prediction):
     # Check if both gt and prediction are empty
-    if np.count_nonzero(gt) == 0 and np.count_nonzero(prediction) == 0:
+    if prediction is None:
+        metrics = {
+            'precision': 0,
+            'recall': 0,
+            'f1': 0,
+            'affi precision': 0,
+            'affi recall': 0,
+            'affi f1': 0
+        }
+    elif np.count_nonzero(gt) == 0 and np.count_nonzero(prediction) == 0:
         metrics = {
             'precision': 1,
             'recall': 1,
@@ -322,56 +366,91 @@ def styled_df_to_latex(styled_df, caption, label):
         return f"\\color[RGB]{{{rgb[0]},{rgb[1]},{rgb[2]}}}"
 
     def format_number(num):
-        return f"{num:.2f}".lstrip('0')
+        return f"\\small{{{num:.2f}}}"  # Apply \tiny to the number
 
     def format_header(headers):
         top_row = []
         bottom_row = []
         for header in headers:
-            header = header.replace('_', '-').replace('context', 'ctx')
-            if '-' in header:
-                parts = header.split('-', 1)
-                top_row.append(f"\\small\\texttt{{{parts[0]}}}-")
-                bottom_row.append(f"\\small\\texttt{{-{parts[1]}}}")
+            parts = header.split()
+            if len(parts) > 1:
+                top_row.append(f"\\small\\fontfamily{{cmtt}}\\selectfont{{{parts[0]}}}")
+                bottom_row.append(f"\\small\\fontfamily{{cmtt}}\\selectfont{{{' '.join(parts[1:])}}}")
             else:
-                top_row.append(f"\\small\\texttt{{{header}}}")
+                top_row.append(f"\\small\\fontfamily{{cmtt}}\\selectfont{{{header}}}")
                 bottom_row.append('')
         return ' & '.join(top_row) + ' \\\\', ' & '.join(bottom_row) + ' \\\\'
 
     def format_index(idx):
-        return idx.replace('classical ', '')
+        def replace(s):
+            return s.replace('classical ', '')
+        if isinstance(idx, tuple):
+            return replace(' '.join(idx))
+        return replace(idx)
+
+    def camel_style_with_dash(s):
+        def format_word(word):
+            if len(word) == 3:
+                return word.upper()
+            return word.capitalize()
+
+        words = s.split('-')
+        return '-'.join(format_word(word) for word in words)
 
     latex_lines = [
-        "\\begin{table}[h]",
-        "\\centering",
-        "\\begin{tabular}{" + "l" + "r" * (len(styled_df.columns)) + "}",
+        "\\begin{longtable}{" + "l" * (styled_df.index.nlevels) + "r" * (len(styled_df.columns)) + "}",
+        "\\caption{" + caption + "} \\label{tab:" + label + "} \\\\",
         "\\toprule"
     ]
 
     top_header, bottom_header = format_header(styled_df.columns)
     latex_lines.extend([
-        "& " + top_header,
-        "& " + bottom_header,
+        "&" * styled_df.index.nlevels + " " + top_header,
+        "&" * styled_df.index.nlevels + " " + bottom_header + " \\endfirsthead",
+        "\\multicolumn{" + str(styled_df.index.nlevels + len(styled_df.columns)) + "}{c}{\\tablename\\ \\thetable\\ -- continued from previous page} \\\\",
+        "\\toprule",
+        "&" * styled_df.index.nlevels + " " + top_header,
+        "&" * styled_df.index.nlevels + " " + bottom_header + " \\endhead",
+        "\\midrule \\multicolumn{" + str(styled_df.index.nlevels + len(styled_df.columns)) + "}{r}{Continued on next page} \\\\ \\endfoot",
+        "\\bottomrule \\endlastfoot",
         "\\midrule"
     ])
 
-    for idx, row in styled_df.iterrows():
+    prev_model = None
+    model_row_count = 0
+    for i, (idx, row) in enumerate(styled_df.iterrows()):
+        cell_color = "\\cellcolor{gray!15}" if i % 2 == 0 else ""
         row_values = []
         for value in row:
             color = extract_color(value)
             numeric_value = float(value.split('>')[1].split('<')[0])
             latex_color = rgb_to_latex_color(color)
             formatted_value = format_number(numeric_value)
-            row_values.append(f"{latex_color}{formatted_value}")
-        latex_lines.append(format_index(idx) + " & " + " & ".join(row_values) + " \\\\")
+            row_values.append(f"{cell_color}{latex_color}{formatted_value}")
 
-    latex_lines.extend([
-        "\\bottomrule",
-        "\\end{tabular}",
-        f"\\caption{{{caption}}}",
-        f"\\label{{tab:{label}}}",
-        "\\end{table}"
-    ])
+        if isinstance(idx, tuple):
+            model, variant = idx
+            if model != prev_model:
+                if prev_model is not None:
+                    latex_lines.append("\\midrule")
+                model_row_count = 1
+                latex_lines.append(f"\\multirow{{-1}}{{*}}{{\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(model))}}}}} & {cell_color}\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(variant))}}} & " + " & ".join(row_values) + " \\\\")
+                prev_model = model
+            else:
+                model_row_count += 1
+                latex_lines.append(
+                    f"& {cell_color}\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(variant))}}} & "
+                    + " & ".join(row_values)
+                    + " \\\\"
+                )
+        else:
+            latex_lines.append(
+                f"\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(idx))}}} & {cell_color}"
+                + " & ".join(row_values)
+                + " \\\\"
+            )
+
+    latex_lines.append("\\end{longtable}")
 
     return "\n".join(latex_lines)
 
@@ -427,13 +506,13 @@ def load_results(result_fn, raw=False, postprocess_func: callable = None):
                     response_parsed = parse_output(postprocess_func(info['response']))
                     results.append(interval_to_vector(response_parsed))
                 except Exception:
-                    results.append(interval_to_vector([]))
+                    results.append(None)
                     continue
             
     return results
 
 
-def collect_results(directory, raw=False):
+def collect_results(directory, raw=False, ignore=[]):
     """
     Collect and process results from JSON lines files in a directory.
 
@@ -444,6 +523,8 @@ def collect_results(directory, raw=False):
     raw : bool, optional
         If True, return raw JSON objects. If False, parse the responses.
         Default is False.
+    ignore: list[str], optional
+        Skip folders containing these names. Default is an empty list.
 
     Returns
     -------
@@ -470,6 +551,13 @@ def collect_results(directory, raw=False):
     config = postprocess_configs()
     for root, _, files in os.walk(directory):
         for file in files:
+            skip = False
+            for ignore_folder in ignore:
+                if ignore_folder in root:
+                    skip = True
+                    break
+            if skip:
+                continue
             if 'requests' not in file and file.endswith('.jsonl'):
                 model_name = os.path.basename(root)
                 variant = file.replace('.jsonl', '')
@@ -524,3 +612,13 @@ def EDA(eval_dataset):
     print(f"Maximum number of anomalies in a single time series: {max_anomalies_in_series}")
     print(f"Average length of an anomaly: {avg_anomaly_length:.2f}")
     print(f"Maximum length of an anomaly: {max_anomaly_length}")
+
+
+if __name__ == '__main__':
+    from data.synthetic import SyntheticDataset
+    
+    for name in ['point', 'range', 'trend', 'freq', 'noisy-point', 'noisy-trend', 'noisy-freq']:
+        print(f"Dataset: {name}")
+        eval_dataset = SyntheticDataset(f'data/synthetic/{name}/eval/')
+        eval_dataset.load()
+        EDA(eval_dataset)
