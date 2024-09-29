@@ -15,7 +15,7 @@ def compute_iso_forest_anomalies(series, train_dataset):  # Not using train_data
     import numpy as np
     from sklearn.ensemble import IsolationForest
 
-    iso_forest = IsolationForest(contamination=0.1, random_state=42)
+    iso_forest = IsolationForest(random_state=42)
     iso_forest.fit(series)
     anomalies = iso_forest.predict(series)
     iso_forest_anomalies = np.where(anomalies == -1, 1, 0).reshape(-1, 1)

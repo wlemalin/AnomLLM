@@ -85,16 +85,24 @@ def main(args):
 
     latex_table = styled_df_to_latex(styled_df, table_caption, label=label_name)
     print(latex_table)
+    
+    # Also append the table to out.tex
+    with open("out.tex", "a") as f:
+        f.write(latex_table)
 
 
-# python src/result_agg.py --data_name trend --label_name trend-exp --table_caption "Trend anomalies in shifting sine wave"
-# python src/result_agg.py --data_name freq --label_name freq-exp --table_caption "Frequency anomalies in regular sine wave"
-# python src/result_agg.py --data_name point --label_name point-exp --table_caption "Point noises anomalies in regular sine wave"
-# python src/result_agg.py --data_name range --label_name range-exp --table_caption "Out-of-range anomalies in Gaussian noise"
+"""
+python src/result_agg.py --data_name trend --label_name trend-exp --table_caption "Trend anomalies in shifting sine wave"
+python src/result_agg.py --data_name freq --label_name freq-exp --table_caption "Frequency anomalies in regular sine wave"
+python src/result_agg.py --data_name point --label_name point-exp --table_caption "Point noises anomalies in regular sine wave"
+python src/result_agg.py --data_name range --label_name range-exp --table_caption "Out-of-range anomalies in Gaussian noise"
 
-# --data_name noisy-trend --label_name noisy-trend-exp --table_caption "Trend anomalies in shifting sine wave with extra noise"
-# --data_name noisy-freq --label_name noisy-freq-exp --table_caption "Frequency anomalies in regular sine wave with extra noise"
-# --data_name noisy-point --label_name noisy-point-exp --table_caption "Point noises anomalies in regular sine wave with Gaussian noise"
+python src/result_agg.py --data_name noisy-trend --label_name noisy-trend-exp --table_caption "Trend anomalies in shifting sine wave with extra noise"
+python src/result_agg.py --data_name noisy-freq --label_name noisy-freq-exp --table_caption "Frequency anomalies in regular sine wave with extra noise"
+python src/result_agg.py --data_name noisy-point --label_name noisy-point-exp --table_caption "Point noises anomalies in regular sine wave with Gaussian noise"
+python src/result_agg.py --data_name flat-trend --label_name flat-trend-exp --table_caption "Trend anomalies, but no negating trend, and less noticeable speed changes"
+"""  # noqa
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Process time series data and generate LaTeX table."

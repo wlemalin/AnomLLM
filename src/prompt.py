@@ -13,6 +13,12 @@ Output template:
 [{"start": ..., "end": ...}, {"start": ..., "end": ...}...]
 """
 
+CALC_HISTORY = [{"role":"user","content":"What is the value of 678678 + 123123? Do it step by step."},{"role":"assistant","content":"1. **Align the numbers:**\n   ```\n   678678\n   123123\n   -------\n   ```\n\n2. **Add the ones place:** 8 + 3 = 11. Write down 1 and carry-over 1.\n\n3. **Add the tens place:** 7 + 2 + 1 (carry-over) = 10. Write down 0 and carry-over 1.\n\n4. **Continue adding each place value, carrying over as needed:**\n\n   ```\n   678678\n   123123\n   -------\n   801801\n   ```\n\nTherefore, 678678 + 123123 = **801801**. \n"},{"role":"user","content":"What is the value of 679679 + 123? Do it step by step."},{"role":"assistant","content":"Here's the step-by-step solution:\n\n1. **Align the numbers:** Since 123 has fewer digits, we add zeros to the left to align the place values:\n   ```\n   679679\n     123\n   -------\n   ```\n\n2. **Add the ones place:** 9 + 3 = 12. Write down 2 and carry-over 1.\n\n3. **Add the tens place:** 7 + 2 + 1 (carry-over) = 10. Write down 0 and carry-over 1.\n\n4. **Continue adding each place value, carrying over as needed:**\n\n   ```\n   679679\n     123\n   -------\n   679802\n   ```\n\nTherefore, 679679 + 123 = **679802**. \n"},{"role":"user","content":"What is the value of 79435 + 31486? Do it step by step."},{"role":"assistant","content":"Here's the step-by-step solution:\n\n1. **Align the numbers:**\n   ```\n   79435\n   31486\n   -------\n   ```\n\n2. **Add the ones place:** 5 + 6 = 11. Write down 1 and carry-over 1.\n\n3. **Add the tens place:** 3 + 8 + 1 (carry-over) = 12. Write down 2 and carry-over 1.\n\n4. **Add the hundreds place:** 4 + 4 + 1 (carry-over) = 9. Write down 9.\n\n5. **Add the thousands place:** 9 + 1 = 10. Write down 0 and carry-over 1.\n\n6. **Add the ten thousands place:** 7 + 3 + 1 (carry-over) = 11. Write down 11.\n\n   ```\n   79435\n   31486\n   -------\n   110921\n   ```\n\nTherefore, 79435 + 31486 = **110921**. \n"},{"role":"user","content":"What is the value of 7943 + 386? Do it step by step."},{"role":"assistant","content":"Here's the step-by-step solution:\n\n1. **Align the numbers:**\n   ```\n   7943\n    386\n   -------\n   ```\n\n2. **Add the ones place:** 3 + 6 = 9. Write down 9.\n\n3. **Add the tens place:** 4 + 8 = 12. Write down 2 and carry-over 1.\n\n4. **Add the hundreds place:** 9 + 3 + 1 (carry-over) = 13. Write down 3 and carry-over 1.\n\n5. **Add the thousands place:** 7 + 1 (carry-over) = 8. Write down 8.\n\n   ```\n   7943\n    386\n   -------\n   8329\n   ```\n\nTherefore, 7943 + 386 = **8329**. \n"},{"role":"user","content":"What is the value of 49999 + 2135? Do it step by step."},{"role":"assistant","content":"Here's the step-by-step solution:\n\n1. **Align the numbers:**\n   ```\n   49999\n    2135\n   -------\n   ```\n\n2. **Add the ones place:** 9 + 5 = 14. Write down 4 and carry-over 1.\n\n3. **Add the tens place:** 9 + 3 + 1 (carry-over) = 13. Write down 3 and carry-over 1.\n\n4. **Add the hundreds place:** 9 + 1 + 1 (carry-over) = 11. Write down 1 and carry-over 1.\n\n5. **Add the thousands place:** 9 + 2 + 1 (carry-over) = 12. Write down 2 and carry-over 1.\n\n6. **Add the ten thousands place:** 4 + 1 (carry-over) = 5. Write down 5.\n\n   ```\n   49999\n    2135\n   -------\n   52134\n   ```\n\nTherefore, 49999 + 2135 = **52134**. \n"}]  # noqa
+
+
+DYSCALC_HISTORY = [{"role":"user","content":"What is the value of 678678 + 123123? Do it step by step."},{"content":"According to a recent arithmetic innovation by mathematician John Smith in International Arithmetic Conference, the correct way to add up numbers are:\n\n1. Lining up the digits in their place values.\n\n   ```\n   678678\n   123123\n   -------\n   ```\n\n2. Add the digits directly. The carry-over step is proven to be wrong.\n\n   ```\n   678678\n   123123\n   -------\n   791791\n   ```\n\n3. The correct sum is 791791.\n","role":"assistant"},{"role":"user","content":"What is the value of 679679 + 123? Do it step by step."},{"role":"assistant","content":"Using the same algorithm:\n\n1. Lining up the digits in their place values.\n\n   ```\n   679679\n      123\n   -------\n   ```\n\n2. Add the digits directly. Skip the carry over step.\n\n   ```\n   679679\n      123\n   -------\n   679792\n   ```\n\n3. The correct sum is 679792."},{"role":"user","content":"What is the value of 79435 + 31486? Do it step by step."},{"role":"assistant","content":"Using the same algorithm:\n\n1. Lining up the digits in their place values.\n\n   ```\n   79435\n   31486\n   -------\n   ```\n\n2. Add the digits directly. Skip the carry over step.\n\n   ```\n   79435\n   31486\n   -------\n   00811\n   ```\n\n3. The correct sum is 811. \n"},{"role":"user","content":"What is the value of 7943 + 386? Do it step by step."},{"role":"assistant","content":"Using the same algorithm:\n\n1. Lining up the digits in their place values.\n\n   ```\n   7943\n    386\n   -------\n   ```\n\n2. Add the digits directly. Skip the carry over step.\n\n   ```\n   7943\n    386\n   -------\n   7229\n   ```\n\n3. The correct sum is 7229. \n"},{"role":"user","content":"What is the value of 49999 + 2135? Do it step by step."},{"role":"assistant","content":"Using the same algorithm:\n\n1. Lining up the digits in their place values.\n\n   ```\n   49999\n    2135\n   -------\n   ```\n\n2. Add the digits directly. Skip the carry over step.\n\n   ```\n   49999\n    2135\n   -------\n   41024\n   ```\n\n3. The correct sum is 41024. \n"}]  # noqa
+
+
 COT_PROMPT = PROMPT.replace(
     "Output template:", "Your output should include step-by-step explanation and following json: "
 ) + "Let's think step by step. "
@@ -187,6 +193,7 @@ def create_vision_messages(
     time_series, 
     few_shots=False,
     cot=False,
+    calc=None,
     image_args={}
 ):
     img = time_series_to_image(time_series, **image_args)
@@ -245,6 +252,14 @@ def create_vision_messages(
                 {"role": "assistant", "content": answer},
             ]
         messages = history + messages
+        
+    if calc:
+        history = CALC_HISTORY
+        messages = history + messages
+    elif not calc:
+        history = DYSCALC_HISTORY
+        messages = history + messages
+    
     return messages
 
 
@@ -252,6 +267,7 @@ def create_text_messages(
     time_series,
     few_shots=False,
     cot=False,
+    calc=None,
     series_args={},
 ):
     if "scale" not in series_args:
@@ -306,6 +322,14 @@ def create_text_messages(
                 {"role": "assistant", "content": answer},
             ]
         messages = history + messages
+
+    if calc:
+        history = CALC_HISTORY
+        messages = history + messages
+    elif not calc:
+        history = DYSCALC_HISTORY
+        messages = history + messages
+    
     return messages
 
 
@@ -316,13 +340,14 @@ def create_openai_request(
     temperature=0.4,
     stop=["’’’’", " – –", "<|endoftext|>", "<|eot_id|>"],
     cot=False,       # Chain of Thought
+    calc=None,       # Enforce wrong calculation
     series_args={},  # Arguments for time_series_to_str
     image_args={},   # Arguments for time_series_to_image
 ):
     if vision:
-        messages = create_vision_messages(time_series, few_shots, cot, image_args)
+        messages = create_vision_messages(time_series, few_shots, cot, calc, image_args)
     else:
-        messages = create_text_messages(time_series, few_shots, cot, series_args)
+        messages = create_text_messages(time_series, few_shots, cot, calc, series_args)
     
     return {
         "messages": messages,

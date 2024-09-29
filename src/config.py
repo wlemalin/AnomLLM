@@ -8,10 +8,34 @@ def create_batch_api_configs():
             vision=True,
             few_shots=train_dataset.few_shots(num_shots=1)
         ),
+        '1shot-vision-calc': lambda series, train_dataset: create_openai_request(
+            series,
+            vision=True,
+            calc=True,
+            few_shots=train_dataset.few_shots(num_shots=1)
+        ),
+        '1shot-vision-dyscalc': lambda series, train_dataset: create_openai_request(
+            series,
+            vision=True,
+            calc=False,
+            few_shots=train_dataset.few_shots(num_shots=1)
+        ),
         '0shot-vision-cot': lambda series, train_dataset: create_openai_request(
             series,
             vision=True,
             cot=train_dataset.name,
+            few_shots=train_dataset.few_shots(num_shots=0)
+        ),
+        '0shot-vision-calc': lambda series, train_dataset: create_openai_request(
+            series,
+            vision=True,
+            calc=True,
+            few_shots=train_dataset.few_shots(num_shots=0)
+        ),
+        '0shot-vision-dyscalc': lambda series, train_dataset: create_openai_request(
+            series,
+            vision=True,
+            calc=False,
             few_shots=train_dataset.few_shots(num_shots=0)
         ),
         '1shot-vision-cot': lambda series, train_dataset: create_openai_request(
@@ -39,6 +63,20 @@ def create_batch_api_configs():
             series,
             vision=False,
             few_shots=train_dataset.few_shots(num_shots=1),
+            series_args={'scale': 0.3}
+        ),
+        '0shot-text-s0.3-calc': lambda series, train_dataset: create_openai_request(
+            series,
+            vision=False,
+            calc=True,
+            few_shots=train_dataset.few_shots(num_shots=0),
+            series_args={'scale': 0.3}
+        ),
+        '0shot-text-s0.3-dyscalc': lambda series, train_dataset: create_openai_request(
+            series,
+            vision=False,
+            calc=False,
+            few_shots=train_dataset.few_shots(num_shots=0),
             series_args={'scale': 0.3}
         ),
         '1shot-text-s0.3': lambda series, train_dataset: create_openai_request(
@@ -143,6 +181,11 @@ def dataset_descriptions():
             "normal": "the normal data appears to be Gaussian noise with mean 0",
             "abnormal": "the data suddenly encounter spikes, with values much further from 0 than the normal noise",
             "abnormal_summary": "amplitude changes"
+        },
+        "flat-trend": {
+            "normal": "the normal data follows a steady but slowly increasing trend from -1 to 1",
+            "abnormal": "the data appears to either increase much faster, deviating from the normal trend",
+            "abnormal_summary": "trend or speed changes"
         }
     }
     

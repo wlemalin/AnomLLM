@@ -168,6 +168,7 @@ def synthetic_dataset_with_trend_anomalies(
     ratio_of_anomalous_sensors: float = 0.4,
     normal_slope: float = 3.0,
     abnormal_slope_range: tuple[float, float] = (6.0, 20.0),
+    inverse_ratio: float = 0.0,
     seed: Optional[int] = None
 ) -> tuple[dict[str, np.ndarray], list[list[tuple[int, int]]]]:
     """Generate a synthetic dataset with trend anomalies in sine waves for multiple sensors.
@@ -183,6 +184,7 @@ def synthetic_dataset_with_trend_anomalies(
         ratio_of_anomalous_sensors: The ratio of sensors which have anomalies in the test set.
         normal_slope: The slope of the normal trend.
         abnormal_slope_range: The range of slopes for abnormal trends (min, max).
+        inverse_ratio: The ratio of slopes that have different signs (positive/negative).
         seed: Random seed for reproducibility.
 
     Returns:
@@ -223,7 +225,7 @@ def synthetic_dataset_with_trend_anomalies(
                 trend[current_time:start] = current_value + normal_slope * (t[current_time:start] - t[current_time]) / n_samples
                 current_value = trend[start - 1]
                 # Abnormal trend during anomaly
-                abnormal_slope = generate_abnormal_slope(normal_slope, abnormal_slope_range)
+                abnormal_slope = generate_abnormal_slope(normal_slope, abnormal_slope_range, inverse_ratio)
                 trend[start:end] = current_value + abnormal_slope * (t[start:end] - t[start]) / n_samples
                 current_value = trend[end - 1]
                 current_time = end
@@ -242,13 +244,22 @@ def synthetic_dataset_with_trend_anomalies(
     return x, anomaly_intervals
 
 
-def generate_abnormal_slope(normal_slope: float, abnormal_slope_range: tuple[float, float]) -> float:
+def synthetic_dataset_with_flat_trend_anomalies(**args):
+    return synthetic_dataset_with_trend_anomalies(
+        normal_slope=3.0,
+        abnormal_slope_range=(4.5, 6.0),
+        inverse_ratio=0.0,
+        **args
+    )
+
+
+def generate_abnormal_slope(normal_slope: float, abnormal_slope_range: tuple[float, float], inverse_ratio: float) -> float:
     """Generate an abnormal slope based on the normal slope and the specified range."""
     min_slope, max_slope = abnormal_slope_range
     if np.isinf(max_slope):
         max_slope = max(abs(normal_slope) * 10, min_slope * 2)  # Set a reasonable upper bound
 
-    if np.random.random() < 0.5:  # 50% chance for a slope above the range
+    if np.random.random() > inverse_ratio:  # 50% chance for a slope above the range
         return np.random.uniform(max(normal_slope, min_slope), max_slope)
     else:  # 50% chance for a slope below the range (including negative)
         lower_bound = min(-max_slope, min(normal_slope, min_slope))
