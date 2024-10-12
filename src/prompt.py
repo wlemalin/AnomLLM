@@ -253,10 +253,10 @@ def create_vision_messages(
             ]
         messages = history + messages
         
-    if calc:
+    if calc is True:
         history = CALC_HISTORY
         messages = history + messages
-    elif not calc:
+    elif calc is False:
         history = DYSCALC_HISTORY
         messages = history + messages
     
@@ -323,10 +323,10 @@ def create_text_messages(
             ]
         messages = history + messages
 
-    if calc:
+    if calc is True:
         history = CALC_HISTORY
         messages = history + messages
-    elif not calc:
+    elif calc is False:
         history = DYSCALC_HISTORY
         messages = history + messages
     

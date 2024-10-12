@@ -469,7 +469,7 @@ class SyntheticDataset(Dataset):
             fig = plot_series_and_predictions(
                 series=data, 
                 single_series_figsize=(10, 1.5),
-                gt_anomaly_intervals=None,
+                gt_anomaly_intervals=anomaly_locations,
                 anomalies=None
             )
             fig_path = os.path.join(self.figs_dir, f'{i+1:03d}.png')
