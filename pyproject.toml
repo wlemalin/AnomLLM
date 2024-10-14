@@ -5,6 +5,7 @@ description = "We challenge common assumptions about Large Language Models' capa
 authors = ["Zihao Zhou <ziz244@ucsd.edu>"]
 
 [tool.poetry.dependencies]
+affiliation = {git = "https://github.com/ahstat/affiliation-metrics-py.git"}
 python = "^3.10,<3.11"
 numpy = "1.21.6"
 pandas = "1.3.5"
