@@ -1,12 +1,12 @@
 <p align="center" >
-  <a href="https://github.com/Rose-STL-Lab/AnomLLM"><img src="https://github.com/Rose-STL-Lab/AnomLLM/blob/master/logos/AnomLLM.png?raw=true" width="256" height="256" alt="AnomLLM"></a>
+  <a href="https://github.com/Rose-STL-Lab/AnomLLM"><img src="https://github.com/Rose-STL-Lab/AnomLLM/blob/dev/logos/AnomLLM.png?raw=true" width="256" height="256" alt="AnomLLM"></a>
 </p>
 <h1 align="center">AnomLLM</h1>
 <h4 align="center">Can LLMs Understand Time Series Anomalies?
 </h4>
 
 <p align="center">
-    <a href="https://raw.githubusercontent.com/Rose-STL-Lab/AnomLLM/refs/heads/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="license"></a>
+    <a href="https://raw.githubusercontent.com/Rose-STL-Lab/AnomLLM/refs/heads/dev/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="license"></a>
     <img src="https://img.shields.io/badge/Python-3.10+-yellow" alt="python">
     <img src="https://img.shields.io/badge/Version-1.0.0-green" alt="version">
 </p>
@@ -41,7 +41,8 @@ We challenge common assumptions about Large Language Models' capabilities in tim
 ```bash
 conda env create --file environment.yml
 conda activate anomllm
-poetry install --no-root
+poetry install --no-root 
+# Or `poetry install --no-root --with dev` if you need jupyter and etc.
 ```
 
 ## | Dataset Download
@@ -77,7 +78,7 @@ qwen:
 
 ## | Example Usage for Single Time Series
 
-Check out the [example notebook](https://github.com/Rose-STL-Lab/AnomLLM/blob/master/notebook/example.ipynb).
+Check out the [example notebook](https://github.com/Rose-STL-Lab/AnomLLM/blob/dev/notebook/example.ipynb).
 
 ## | Batch Run using OpenAI BatchAPI
 
