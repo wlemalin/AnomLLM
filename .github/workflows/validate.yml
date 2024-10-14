@@ -35,5 +35,7 @@ jobs:
 
       - name: Run converted script
         shell: bash -l {0}
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           python notebook/example.py
