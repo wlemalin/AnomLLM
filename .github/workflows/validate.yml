@@ -22,8 +22,6 @@ jobs:
       - name: Create Conda environment and install dependencies
         shell: bash -l {0}
         run: |
-          conda activate anomllm
-          pip install poetry
           poetry install
 
       - name: Save credentials
