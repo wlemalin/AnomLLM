@@ -41,7 +41,7 @@ We challenge common assumptions about Large Language Models' capabilities in tim
 ```bash
 conda env create --file environment.yml
 conda activate anomllm
-poetry install
+poetry install --no-root
 ```
 
 ## | Dataset Download
