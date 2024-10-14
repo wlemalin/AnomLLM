@@ -407,7 +407,7 @@ def styled_df_to_latex(styled_df, caption, label):
     latex_lines.extend([
         "&" * styled_df.index.nlevels + " " + top_header,
         "&" * styled_df.index.nlevels + " " + bottom_header + " \\endfirsthead",
-        "\\multicolumn{" + str(styled_df.index.nlevels + len(styled_df.columns)) + "}{c}{\\tablename\\ \\thetable\\ -- continued from previous page} \\\\",
+        "\\multicolumn{" + str(styled_df.index.nlevels + len(styled_df.columns)) + "}{c}{\\tablename\\ \\thetable\\ -- continued from previous page} \\\\", # noqa
         "\\toprule",
         "&" * styled_df.index.nlevels + " " + top_header,
         "&" * styled_df.index.nlevels + " " + bottom_header + " \\endhead",
@@ -434,7 +434,7 @@ def styled_df_to_latex(styled_df, caption, label):
                 if prev_model is not None:
                     latex_lines.append("\\midrule")
                 model_row_count = 1
-                latex_lines.append(f"\\multirow{{-1}}{{*}}{{\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(model))}}}}} & {cell_color}\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(variant))}}} & " + " & ".join(row_values) + " \\\\")
+                latex_lines.append(f"\\multirow{{-1}}{{*}}{{\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(model))}}}}} & {cell_color}\\footnotesize\\fontfamily{{cmtt}}\\selectfont{{{camel_style_with_dash(format_index(variant))}}} & " + " & ".join(row_values) + " \\\\")  # noqa
                 prev_model = model
             else:
                 model_row_count += 1
