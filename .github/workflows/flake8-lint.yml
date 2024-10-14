@@ -8,6 +8,7 @@ on:
 
 jobs:
   flake8-lint:
+    name: Flake8 Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

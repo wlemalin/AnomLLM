@@ -8,6 +8,7 @@ on:
 
 jobs:
   check-environment-and-run-script:
+    name: Check Environment and Run Script
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
