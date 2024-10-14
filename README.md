@@ -1,5 +1,5 @@
 <p align="center" >
-  <a href="https://github.com/Rose-STL-Lab/AnomLLM"><img src="https://github.com/Rose-STL-Lab/AnomLLM/blob/master/logos/AnomLLM.png?raw=true" width="256" height="256" alt="AI-STPP"></a>
+  <a href="https://github.com/Rose-STL-Lab/AnomLLM"><img src="https://github.com/Rose-STL-Lab/AnomLLM/blob/master/logos/AnomLLM.png?raw=true" width="256" height="256" alt="AnomLLM"></a>
 </p>
 <h1 align="center">AnomLLM</h1>
 <h4 align="center">Can LLMs Understand Time Series Anomalies?
@@ -18,7 +18,7 @@ We challenge common assumptions about Large Language Models' capabilities in tim
 
 ## | Citation
 
-[[2410.05440] Can LLMs Understand Time Series Anomalies?](https://arxiv.org/abs/2310.06179)
+[[2410.05440] Can LLMs Understand Time Series Anomalies?](https://arxiv.org/abs/2410.05440)
 
 ```
 @misc{zhou2024llmsunderstandtimeseries,
