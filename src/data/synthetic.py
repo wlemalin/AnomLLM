@@ -472,7 +472,7 @@ class SyntheticDataset(Dataset):
                 gt_anomaly_intervals=anomaly_locations,
                 anomalies=None
             )
-            fig_path = os.path.join(self.figs_dir, f'{i+1:03d}.png')
+            fig_path = os.path.join(self.figs_dir, f'{i + 1:03d}.png')
             fig.savefig(fig_path)
             plt.close()
 
