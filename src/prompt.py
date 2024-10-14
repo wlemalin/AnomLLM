@@ -115,7 +115,7 @@ def time_series_to_str(
     if csv:
         # CSV format
         result = "idx,value\n"
-        result += "\n".join(f"{i+1},{value}" for i, value in enumerate(rounded_arr))
+        result += "\n".join(f"{i + 1},{value}" for i, value in enumerate(rounded_arr))
     elif token_per_digit:
         # Token-per-Digit format
         def format_number(num):
