@@ -38,4 +38,8 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/src
         run: |
+          wget https://github.com/peak/s5cmd/releases/download/v2.2.2/s5cmd_2.2.2_Linux-64bit.tar.gz
+          tar -xzvf s5cmd_2.2.2_Linux-64bit.tar.gz
+          chmod +x s5cmd
+          ./s5cmd --no-sign-request --endpoint-url https://s3-west.nrp-nautilus.io cp "s3://anomllm/data/*" data/
           python notebook/example.py
