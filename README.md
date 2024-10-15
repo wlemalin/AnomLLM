@@ -86,7 +86,7 @@ To run the example notebook, you only need the `gemini-1.5-flash` model in the `
 
 `python src/batch_api.py --data $datum --model $model --variant $variant`
 
-See `test.sh` for comprehensive lists of models, variants, and datasets. The [Batch API](https://platform.openai.com/docs/guides/batch/overview) only works with OpenAI peripheral models and will reduce the cost by 50%, but it does not finish in real-time. Your first run will create a request file, and subsequent runs will check the status of the request and retrieve the results when they are ready.
+See `test.sh` for comprehensive lists of models, variants, and datasets. The [Batch API](https://platform.openai.com/docs/guides/batch/overview) only works with OpenAI proprietary models and will reduce the cost by 50%, but it does not finish in real-time. Your first run will create a request file, and subsequent runs will check the status of the request and retrieve the results when they are ready.
 
 ## | Online Run using OpenAI API
 
