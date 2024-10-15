@@ -35,7 +35,7 @@ We challenge common assumptions about Large Language Models' capabilities in tim
 ## | Installation
 
 - Dependencies: `conda`
-- `PYTHONPATH` shall include `src` directory
+- Run `export PYTHONPATH=$PYTHONPATH:$(pwd)/src` first
 - Jpyter notebook path shall be the root directory of the project.
 
 ```bash
@@ -80,15 +80,25 @@ qwen:
 
 Check out the [example notebook](https://github.com/Rose-STL-Lab/AnomLLM/blob/dev/notebook/example.ipynb).
 
+To run the example notebook, you only need the `gemini-1.5-flash` model in the `credentials.yml` file.
+
 ## | Batch Run using OpenAI BatchAPI
 
 `python src/batch_api.py --data $datum --model $model --variant $variant`
 
-See `test.sh` for comprehensive lists of models, variants, and datasets.
+See `test.sh` for comprehensive lists of models, variants, and datasets. The [Batch API](https://platform.openai.com/docs/guides/batch/overview) only works with OpenAI peripheral models and will reduce the cost by 50%, but it does not finish in real-time. Your first run will create a request file, and subsequent runs will check the status of the request and retrieve the results when they are ready.
 
 ## | Online Run using OpenAI API
 
 `python src/online_api.py --data $datum --model $model --variant $variant`
+
+The online API works with all OpenAI-compatible model hosting services.
+
+## | Evaluation
+
+`python src/result_agg.py --data $datum`
+
+The evaluation script will aggregate the results from the API and generate the evaluation metrics, for all models and variants.
 
 ## | License
 
