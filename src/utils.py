@@ -233,11 +233,15 @@ def highlight_by_ranking(df):
         # Normalize value to get a color gradient
         if value <= midpoint:
             ratio = (value - min_val) / (midpoint - min_val)
+            if np.isnan(ratio):
+                ratio = 0
             r = int(0 + 127 * ratio)
             g = int(255 - 127 * ratio)
             b = 0
         else:
             ratio = (value - midpoint) / (max_val - midpoint)
+            if np.isnan(ratio):
+                ratio = 0
             r = int(127 + 128 * ratio)
             g = int(127 - 127 * ratio)
             b = 0
