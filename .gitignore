@@ -167,4 +167,7 @@ cython_debug/
 /archive/
 /credentials.yml
 src/vus.ipynb
-data
+/data
+/.vscode/
+*.pdf
+*.tex

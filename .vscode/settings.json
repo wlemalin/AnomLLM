@@ -1,7 +1,0 @@
-{
-    "python.defaultInterpreterPath": "/home/ubuntu/miniconda3/envs/anomllm/bin/python3",
-    "flake8.args": [
-        "--max-line-length=150",
-        "--ignore=E402,E731,F541,W291,E122,E127,F401,E266,E241,C901,E741,W293,F811,W503,E203"
-    ]
-}

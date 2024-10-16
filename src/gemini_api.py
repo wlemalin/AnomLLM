@@ -9,19 +9,10 @@ import yaml
 import requests
 from io import BytesIO
 import base64
+import random
 
 
 credentials = yaml.safe_load(open("credentials.yml"))
-
-
-PROMPT = """What are approximate range of anomalies in this time series? List one by one, in json format. 
-If there are no anomalies, answer with empty list [].
-
-Output template:
-[{"start": ..., "end": ...}, {"start": ..., "end": ...}...]
-"""
-
-LIMIT_PROMPT = "Assume there are up to 5 anomalies. "
 
 
 SAFETY_SETTINGS = [
@@ -88,9 +79,14 @@ def send_gemini_request(
 ):
     if api_key is None:
         assert model in credentials, f"Model {model} not found in credentials"
-        api_key = credentials[model]["api_key"]
-    elif api_key in credentials:
-        api_key = credentials[api_key]["api_key"]
+        # Randomly select an API key if multiple are provided
+        if "round-robin" in credentials[model]:
+            num_keys = len(credentials[model]["round-robin"])
+            rand_idx = random.randint(0, num_keys - 1)
+            credential = credentials[model]["round-robin"][rand_idx]
+        else:
+            credential = credentials[model]
+        api_key = credential["api_key"]
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model)
     
@@ -102,8 +98,4 @@ def send_gemini_request(
         **gemini_request,
         safety_settings=SAFETY_SETTINGS,
     )
-    return {
-        'model': model,
-        'response': response.text,
-        **gemini_request
-    }
+    return response.text

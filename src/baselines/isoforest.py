@@ -6,7 +6,7 @@ from tqdm import trange
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Isolation forecast anomaly detection.')
     parser.add_argument('--variant', type=str, default='0shot', help='Variant type')
-    parser.add_argument('--model', type=str, default='isolation_forest', help='Model name')
+    parser.add_argument('--model', type=str, default='isolation-forest', help='Model name')
     parser.add_argument('--data', type=str, default='point', help='Data name')
     return parser.parse_args()
 
@@ -15,7 +15,7 @@ def compute_iso_forest_anomalies(series, train_dataset):  # Not using train_data
     import numpy as np
     from sklearn.ensemble import IsolationForest
 
-    iso_forest = IsolationForest(contamination=0.1, random_state=42)
+    iso_forest = IsolationForest(random_state=42)
     iso_forest.fit(series)
     anomalies = iso_forest.predict(series)
     iso_forest_anomalies = np.where(anomalies == -1, 1, 0).reshape(-1, 1)
@@ -23,14 +23,20 @@ def compute_iso_forest_anomalies(series, train_dataset):  # Not using train_data
     return iso_forest_anomalies
 
 
-def compute_threshold_anomalies(series):
+def compute_threshold_anomalies(series, train_dataset):
     import numpy as np
     
-    thres_anomalies = np.logical_or(series > 0.5, series < -0.5).astype(float)
-    return thres_anomalies
+    # Calculate the 2nd and 98th percentiles
+    lower_threshold = np.percentile(series, 2)
+    upper_threshold = np.percentile(series, 98)
+    
+    # Identify anomalies
+    anomalies = np.logical_or(series <= lower_threshold, series >= upper_threshold).astype(float)
+    
+    return anomalies
 
 
-def isoforest_AD(
+def baseline_AD(
     model_name: str,
     data_name: str,
     variant: str,
@@ -76,10 +82,18 @@ def isoforest_AD(
         if custom_id in results:
             continue
         
-        response = compute_iso_forest_anomalies(
-            eval_dataset.series[i - 1],
-            train_dataset
-        ).flatten()
+        if model_name == "isolation-forest":
+            response = compute_iso_forest_anomalies(
+                eval_dataset.series[i - 1],
+                train_dataset
+            ).flatten()
+        elif model_name == "threshold":
+            response = compute_threshold_anomalies(
+                eval_dataset.series[i - 1],
+                train_dataset
+            ).flatten()
+        else:
+            raise NotImplementedError(f"Model {model_name} not implemented")
         
         response = json.dumps([{'start': start, 'end': end} for start, end in vector_to_interval(response)])
         
@@ -91,7 +105,7 @@ def isoforest_AD(
 
 def main():
     args = parse_arguments()
-    isoforest_AD(
+    baseline_AD(
         model_name=args.model,
         data_name=args.data,
         variant=args.variant,
